@@ -1,0 +1,46 @@
+name: main workflow
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - 'develop'
+      - 'master'
+    types: [ opened ,closed ,synchronize ,reopened ]
+
+jobs:
+  lowercase_name:
+    runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.toLower.outputs.lowercase }}
+    steps:
+      - id: toLower
+        uses: ASzc/change-string-case-action@v2
+        with:
+          string: ${{ github.repository }}
+
+  build-docker-image:
+    needs: lowercase_name
+    if: ((github.event.action != 'closed' && github.event.pull_request.merged != true))
+    uses: ./.github/workflows/build-docker-image-workflow.yml
+    with:
+      REGISTRY: ghcr.io
+      username: ${{ github.actor }}
+      IMAGE: ${{needs.lowercase_name.outputs.repository}}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+
+  delete-docker-image:
+    if: ((github.event.action == 'closed' || github.event.pull_request.merged == true))
+    uses: ./.github/workflows/delete-docker-image-workflow.yml
+    with:
+      REGISTRY: ghcr.io
+      username: ${{ github.actor }}
+      TAG: pr-${{ github.event.number }}
+    secrets:
+      token: ${{ secrets.SMARTMEDBOT_PAT }}

@@ -1,0 +1,43 @@
+version: '3'
+
+x-app: &app
+  build:
+    context: .
+    args:
+      UID: ${UID}
+      GID: ${GID}
+      BASE_PHP_TAG: ${BASE_PHP_TAG}
+  env_file:
+    - docker-compose.env
+  environment:
+    PHP_CLI_MEMORY_LIMIT: "1024M"
+  ports:
+    - "8080"
+  volumes:
+    - ./:/var/www/app
+
+services:
+  app:
+    <<: *app
+    command: ["rr", "serve", "-c", ".rr.dev.yaml"]
+
+  xdebug:
+    <<: *app
+    command: ["rr", "serve", "-c", ".rr.dev.yaml"]
+    profiles: ["xdebug"]
+    env_file:
+      - docker-compose.env
+      - .env.xdebug
+    extra_hosts:
+      # https://stackoverflow.com/a/67158212
+      # only works with Docker v20.10+
+      - "host.docker.internal:host-gateway"
+
+  test:
+    <<: *app
+    command: ["composer", "run", "test"]
+    profiles:
+      - test
+    env_file:
+      - docker-compose.env
+      - .env.test

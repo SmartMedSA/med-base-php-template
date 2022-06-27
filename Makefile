@@ -1,99 +1,23 @@
 SHELL := /bin/bash
 
-NAME = app
 APP_SERVICE_NAME := app
 XDEBUG_SERVICE_NAME := xdebug
 TEST_SERVICE_NAME := test
 
-REPO = $(CI_REGISTRY_IMAGE)
+include docker-compose.env
+-include .env.local
 
-ifeq ($(REPO),)
-    # Emulate docker-compose repo structure.
-	REPO = $(shell basename $(CURDIR))_$(APP_SERVICE_NAME)
-endif
+.PHONY: dcps dcupd dcdn dcstop dclogs dcshell dcxdbg dctest dccheck
 
-ifeq ($(IMAGE_TAG),)
-    IMAGE_TAG ?= latest
-endif
-
-.PHONY: build buildx check test pull push shell run start stop logs clean release
-
-default: build
-
-build:
-	docker build \
-		$(PARAMS) \
-		--cache-from $(REPO):$(IMAGE_TAG) \
-		-t $(REPO):$(IMAGE_TAG) \
-		--pull \
-		./
-
-buildx:
-	docker buildx build \
-		$(PARAMS) \
-		--cache-from=type=registry,ref=$(REPO):$(IMAGE_TAG) \
-		-t $(REPO):$(IMAGE_TAG) \
-		--push \
-		./
-
-check:
-	docker run --rm \
-		--name $(NAME) \
-		$(PORTS) \
-		$(VOLUMES) \
-		--env-file .env.local --env-file .env.test $(ENV) \
-		$(REPO):$(IMAGE_TAG) \
-		composer run check
-
-test:
-	docker run --rm \
-		--name $(NAME) \
-		$(PORTS) \
-		$(VOLUMES) \
-		--env-file .env.local --env-file .env.test $(ENV) \
-		$(REPO):$(IMAGE_TAG) \
-		composer run test
-
-pull:
-	-docker pull $(REPO):$(IMAGE_TAG)
-
-push:
-	docker push $(REPO):$(IMAGE_TAG)
-
-shell:
-	docker run --rm -i -t \
-		--name $(NAME) \
-		$(PORTS) \
-		$(VOLUMES) \
-		--env-file .env.local $(ENV) \
-		$(REPO):$(IMAGE_TAG) \
-		/bin/bash
-
-run:
-	docker run --rm --name $(NAME) $(PORTS) $(VOLUMES) $(ENV) $(REPO):$(IMAGE_TAG) $(CMD)
-
-start:
-	docker run -d --name $(NAME) $(PORTS) $(VOLUMES) $(ENV) $(REPO):$(IMAGE_TAG)
-
-stop:
-	docker stop $(NAME)
-
-logs:
-	docker logs $(NAME)
-
-clean:
-	-docker rm -f $(NAME)
-
-# Run build steps on CI.
-ci.build: pull build push
+default: dcps
 
 # Get services URLs and docker-compose process status.
 dcps:
-	$(eval APP_ID := $(shell ${DOCKER_COMPOSE_CMD} ps -q $(APP_SERVICE_NAME)))
+	$(eval APP_ID := $(shell bin/docker-compose ps -q $(APP_SERVICE_NAME) 2> /dev/null))
 	$(eval APP_PORT := $(shell docker inspect $(APP_ID) --format='{{json (index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2> /dev/null))
 	@echo $(APP_SERVICE_NAME): $(if $(APP_PORT), "http://localhost:$(APP_PORT)", "port not found.")
 
-	-$(eval XDEBUG_ID := $(shell ${DOCKER_COMPOSE_CMD} --profile xdebug ps -q $(XDEBUG_SERVICE_NAME)))
+	-$(eval XDEBUG_ID := $(shell bin/docker-compose --profile xdebug ps -q $(XDEBUG_SERVICE_NAME) 2> /dev/null))
 	-$(eval XDEBUG_PORT := $(shell docker inspect $(XDEBUG_ID) --format='{{json (index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2> /dev/null))
 	@echo $(XDEBUG_SERVICE_NAME): $(if $(XDEBUG_PORT), "http://localhost:$(XDEBUG_PORT)", "port not found.")
 
@@ -106,7 +30,7 @@ dcupd:
 	bin/docker-compose up -d --build --remove-orphans
 
 # Rebuild images, remove orphans, and docker-compose up.
-dcdown:
+dcdn:
 	bin/docker-compose down --remove-orphans
 
 # Stop all runner containers.
@@ -115,11 +39,11 @@ dcstop:
 
 # Get app-name container logs.
 dclogs:
-	bin/docker-compose logs --tail=100 -f $(APP_SERVICE_NAME)
+	bin/docker-compose logs --tail=100 -f $(APP_SERVICE_NAME) $(XDEBUG_SERVICE_NAME)
 
 # Get a bash inside running app-name container.
 dcshell:
-	bin/docker-compose exec $(APP_SERVICE_NAME) bash
+	bin/docker-compose run --rm --no-deps --entrypoint="" $(APP_SERVICE_NAME) bash
 
 # Start app-name with xdebug enabled.
 dcxdbg:

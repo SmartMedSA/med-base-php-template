@@ -31,7 +31,7 @@ dcupd:
 
 # Rebuild images, remove orphans, and docker-compose up.
 dcdn:
-	bin/docker-compose down --remove-orphans
+	bin/docker-compose down --remove-orphans --volumes
 
 # Stop all runner containers.
 dcstop:

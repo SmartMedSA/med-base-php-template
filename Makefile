@@ -43,7 +43,7 @@ dclogs:
 
 # Get a bash inside running app-name container.
 dcshell:
-	bin/docker-compose run --rm --no-deps --entrypoint="" $(APP_SERVICE_NAME) bash
+	bin/docker-compose exec $(APP_SERVICE_NAME) bash
 
 # Start app-name with xdebug enabled.
 dcxdbg:

@@ -1,7 +1,7 @@
 # TODO: fix version of base-php later
 ARG BASE_PHP_TAG
 
-FROM ${BASE_PHP_TAG:-"ghcr.io/smartmedsa/base-php:develop"}
+FROM ${BASE_PHP_TAG:-"ghcr.io/smartmedsa/base-php:8.0-develop"}
 
 ARG UID=33
 ARG GID=33

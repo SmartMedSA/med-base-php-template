@@ -67,10 +67,10 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
-      - name: run test
+      - name: docker - composer run test
         shell: bash
         run: |
-          docker run --rm ${{ needs.build.outputs.tags }} composer test
+          docker run --rm --env-file .env.test ${{ needs.build.outputs.tags }} composer run test
 
   lint:
     runs-on: ubuntu-latest
@@ -86,7 +86,7 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
-      - name: docker - run check
+      - name: docker - composer run check
         shell: bash
         run: |
-          docker run --rm ${{ needs.build.outputs.tags }} composer check
+          docker run --rm --env-file .env.test ${{ needs.build.outputs.tags }} composer run check

@@ -24,10 +24,10 @@ jobs:
         with:
           string: ${{ github.repository }}
 
-  build-docker-image:
+  build:
     needs: lowercase_name
     if: ((github.event.action != 'closed' && github.event.pull_request.merged != true))
-    uses: ./.github/workflows/build-docker-image-workflow.yml
+    uses: ./.github/workflows/docker_build.yml
     with:
       REGISTRY: ghcr.io
       username: ${{ github.actor }}
@@ -35,9 +35,9 @@ jobs:
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 
-  delete-docker-image:
+  cleanup:
     if: ((github.event.action == 'closed' || github.event.pull_request.merged == true))
-    uses: ./.github/workflows/delete-docker-image-workflow.yml
+    uses: ./.github/workflows/docker_delete.yml
     with:
       REGISTRY: ghcr.io
       username: ${{ github.actor }}

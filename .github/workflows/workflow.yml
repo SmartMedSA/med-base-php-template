@@ -50,8 +50,8 @@ jobs:
     if: ((github.event.action == 'closed' || github.event.pull_request.merged == true))
     uses: ./.github/workflows/docker_delete.yml
     with:
-      REGISTRY: ghcr.io
+      registry: ghcr.io
       username: ${{ github.actor }}
-      TAG: pr-${{ github.event.number }}
+      tag: pr-${{ github.event.number }}
     secrets:
       token: ${{ secrets.SMARTMEDBOT_PAT }}

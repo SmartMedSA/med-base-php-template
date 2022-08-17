@@ -1,4 +1,4 @@
-name: delete docker image
+name: Docker Delete
 
 on:
   workflow_call:
@@ -6,10 +6,10 @@ on:
       username:
         required: true
         type: string
-      REGISTRY:
+      registry:
         required: true
         type: string
-      TAG:
+      tag:
         required: false
         type: string
     secrets:
@@ -29,16 +29,14 @@ jobs:
       - name: "Log in to the Container registry"
         uses: docker/login-action@v2
         with:
-          registry: ${{ inputs.REGISTRY }}
+          registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
       - name: Delete image
         uses: bots-house/ghcr-delete-image-action@v1.0.0
         with:
-          # NOTE: at now only orgs is supported
           owner: ${{ github.repository_owner }}
           name: ${{ github.event.repository.name }}
-          # NOTE: using Personal Access Token
           token: ${{ secrets.token }}
-          tag: ${{ inputs.TAG }}
+          tag: ${{ inputs.tag }}

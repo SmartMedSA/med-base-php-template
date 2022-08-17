@@ -1,0 +1,30 @@
+name: Semantic Release
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        required: true
+
+jobs:
+  release:
+    name: semantic release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: npm i -g @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/git semantic-release conventional-changelog-conventionalcommits @saithodev/semantic-release-backmerge
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.token }}
+        run: npx semantic-release

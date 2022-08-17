@@ -6,10 +6,10 @@ on:
       username:
         required: true
         type: string
-      REGISTRY:
+      registry:
         required: true
         type: string
-      IMAGE:
+      image:
         required: true
         type: string
     secrets:
@@ -26,6 +26,11 @@ jobs:
       tags: ${{ steps.docker_metadata.outputs.tags }}
 
     steps:
+      - id: tolower_image
+        uses: ASzc/change-string-case-action@v2
+        with:
+          string: ${{ inputs.image }}
+
       - name: checkout
         uses: actions/checkout@v3
 
@@ -33,7 +38,7 @@ jobs:
         id: docker_login
         uses: docker/login-action@v2
         with:
-          registry: ${{ inputs.REGISTRY }}
+          registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
@@ -41,7 +46,7 @@ jobs:
         id: docker_metadata
         uses: docker/metadata-action@v4
         with:
-          images: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE }}
+          images: ${{ inputs.registry }}/${{ steps.tolower_image.outputs.lowercase }}
           flavor: |
             latest=false
       
@@ -58,7 +63,7 @@ jobs:
           labels: ${{ steps.docker_metadata.outputs.labels }}
           cache-from: |
             type=registry,ref=${{ steps.docker_metadata.outputs.tags }}
-            type=registry,ref=${{ inputs.REGISTRY }}/${{ inputs.IMAGE }}:${{ github.event.repository.default_branch }}
+            type=registry,ref=${{ inputs.registry }}/${{ steps.tolower_image.outputs.lowercase }}:${{ github.event.repository.default_branch }}
           cache-to: type=inline 
 
   test:
@@ -71,7 +76,7 @@ jobs:
       - name: docker - login
         uses: docker/login-action@v2
         with:
-          registry: ${{ inputs.REGISTRY }}
+          registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
  
@@ -90,7 +95,7 @@ jobs:
       - name: docker - login
         uses: docker/login-action@v2
         with:
-          registry: ${{ inputs.REGISTRY }}
+          registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 

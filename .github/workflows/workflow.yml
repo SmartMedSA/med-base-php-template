@@ -24,23 +24,26 @@ jobs:
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 
-  cd:
-    if: github.ref == 'refs/heads/develop'
-    needs: ci
-    uses: ./.github/workflows/waypoint.yml
-    with:
-      workspace: develop
-      tag: develop
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
-      encodedString:  ${{ secrets.MEDV2_STAGE_KUBE_CONFIG_B64 }}
-      WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
-      WAYPOINT_SERVER_ADDR: ${{ secrets.WAYPOINT_SERVER_ADDR }}
-      WAYPOINT_SERVER_TLS: ${{ secrets.WAYPOINT_SERVER_TLS }}
-      WAYPOINT_SERVER_TLS_SKIP_VERIFY: ${{ secrets.WAYPOINT_SERVER_TLS_SKIP_VERIFY }}
+  # Disabled on public repository. Use when needed.
+  # cd:
+  #   if: github.ref == 'refs/heads/develop'
+  #   needs: ci
+  #   uses: ./.github/workflows/waypoint.yml
+  #   with:
+  #     workspace: develop
+  #     tag: develop
+  #   secrets:
+  #     token: ${{ secrets.GITHUB_TOKEN }}
+  #     encodedString:  ${{ secrets.MEDV2_STAGE_KUBE_CONFIG_B64 }}
+  #     WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
+  #     WAYPOINT_SERVER_ADDR: ${{ secrets.WAYPOINT_SERVER_ADDR }}
+  #     WAYPOINT_SERVER_TLS: ${{ secrets.WAYPOINT_SERVER_TLS }}
+  #     WAYPOINT_SERVER_TLS_SKIP_VERIFY: ${{ secrets.WAYPOINT_SERVER_TLS_SKIP_VERIFY }}
 
   release:
-    needs: [ci, cd]
+    # Depennd on cd job when enabled.
+    # needs: [ci, cd]
+    needs: [ci]
     if: github.ref == 'refs/heads/master'
     uses: ./.github/workflows/semantic_release.yml
     secrets:

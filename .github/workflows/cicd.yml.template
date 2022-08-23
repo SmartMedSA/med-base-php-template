@@ -1,0 +1,52 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - 'develop'
+      - 'master'
+    types: [ opened ,closed ,synchronize ,reopened ]
+
+jobs:
+  ci:
+    if: ((github.event.action != 'closed' && github.event.pull_request.merged != true))
+    uses: SmartMedSA/med-base-php-template/.github/workflows/docker_build.yml@master
+    with:
+      registry: ghcr.io
+      username: ${{ github.actor }}
+      image: ${{ github.repository }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+
+  cd:
+    if: github.ref == 'refs/heads/develop'
+    needs: ci
+    uses: SmartMedSA/med-base-php-template/.github/workflows/waypoint.yml@master
+    with:
+      environment: develop
+      workspace: develop
+      tag: develop
+    secrets:
+      # Some secrets are environment specific, but we need to "authorize" them
+      # by passing them here.
+      token: ${{ secrets.GITHUB_TOKEN }}
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
+      WAYPOINT_SERVER_ADDR: ${{ secrets.WAYPOINT_SERVER_ADDR }}
+      WAYPOINT_SERVER_TLS: ${{ secrets.WAYPOINT_SERVER_TLS }}
+      WAYPOINT_SERVER_TLS_SKIP_VERIFY: ${{ secrets.WAYPOINT_SERVER_TLS_SKIP_VERIFY }}
+      WP_VARS_HCL: ${{ secrets.WP_VARS_HCL }}
+
+  release:
+    # Depennd on cd job when enabled.
+    needs: [ci, cd]
+    if: github.ref == 'refs/heads/master'
+    uses: SmartMedSA/med-base-php-template/.github/workflows/semantic_release.yml@master
+    secrets:
+      token: ${{ secrets.SMARTMEDBOT_PAT }}

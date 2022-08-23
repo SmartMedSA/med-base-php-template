@@ -1,0 +1,37 @@
+name: Cleanup
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - closed
+
+  artifact:
+    uses: SmartMedSA/med-base-php-template/.github/workflows/docker_delete.yml@master
+    with:
+      registry: ghcr.io
+      username: ${{ github.actor }}
+      tag: pr-${{ github.event.number }}
+    secrets:
+      token: ${{ secrets.SMARTMEDBOT_PAT }}
+
+  waypoint:
+    if: github.ref == 'refs/heads/develop'
+    needs: ci
+    uses: SmartMedSA/med-base-php-template/.github/workflows/waypoint.yml@master
+    with:
+      environment: develop
+      workspace: develop
+      tag: develop
+      operation: destroy
+    secrets:
+      # Some secrets are environment specific, but we need to "authorize" them
+      # by passing them here.
+      token: ${{ secrets.GITHUB_TOKEN }}
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
+      WAYPOINT_SERVER_ADDR: ${{ secrets.WAYPOINT_SERVER_ADDR }}
+      WAYPOINT_SERVER_TLS: ${{ secrets.WAYPOINT_SERVER_TLS }}
+      WAYPOINT_SERVER_TLS_SKIP_VERIFY: ${{ secrets.WAYPOINT_SERVER_TLS_SKIP_VERIFY }}
+      WP_VARS_HCL: ${{ secrets.WP_VARS_HCL }}

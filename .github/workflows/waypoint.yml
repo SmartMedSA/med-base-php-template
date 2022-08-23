@@ -3,20 +3,23 @@ name: Waypoint
 on:
   workflow_call:
     inputs:
+      operation:
+        description: Waypoint operation to execute. Allowed values are up, destroy. Default to up.
+        type: string
+        default: up
+      environment:
+        required: true
+        type: string
       workspace:
         required: true
         type: string
       tag:
         required: true
         type: string
-      ingress:
-        required: false
-        type: string
-        default: '{class="nginx",target="medv2-stage-tn-ec1-ingress.med.ovh", zone="med.ovh"}'
     secrets:
       token:
         required: true
-      encodedString:
+      kubeconfig:
         required: true
       WAYPOINT_SERVER_TOKEN:
         required: true
@@ -26,32 +29,25 @@ on:
         required: false
       WAYPOINT_SERVER_TLS_SKIP_VERIFY:
         required: false
+      WP_VARS_HCL:
+        required: false
 
-env:
-  WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
-  WAYPOINT_SERVER_ADDR: ${{ secrets.WAYPOINT_SERVER_ADDR }}
-  WAYPOINT_SERVER_TLS: ${{ secrets.WAYPOINT_SERVER_TLS }}
-  WAYPOINT_SERVER_TLS_SKIP_VERIFY: ${{ secrets.WAYPOINT_SERVER_TLS_SKIP_VERIFY }}
 
 jobs:
   waypoint_up:
-    name: waypoint up
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     permissions:
       contents: read
       packages: write
-
     steps:
-      - name: System - install dependencies
+      - name: exec - install dependencies
         run: |
           sudo apt-get install apt-transport-https --yes
-
           wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo dd status=none of=/usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-
           curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-
           sudo apt update && sudo apt install waypoint helm
 
       - name: Docker - login container registry
@@ -69,20 +65,26 @@ jobs:
         uses: timheuer/base64-to-file@v1.1
         with:
           fileName: 'config'
-          encodedString: ${{ secrets.encodedString }}
+          encodedString: ${{ secrets.kubeconfig }}
 
-      - name: Helm - update dependencies
+      - name: script - helm dependency update
         run: |
           helm dependency update chart/
 
-      - name: Waypoint - up
+      - name: script - waypoint up
         env:
           KUBECONFIG: ${{ steps.kubeconfig.outputs.filePath }}
-          WP_VAR_registry_auth_username: ${{ github.actor }}
+          WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
+          WAYPOINT_SERVER_ADDR: ${{ secrets.WAYPOINT_SERVER_ADDR }}
+          WAYPOINT_SERVER_TLS: ${{ secrets.WAYPOINT_SERVER_TLS }}
+          WAYPOINT_SERVER_TLS_SKIP_VERIFY: ${{ secrets.WAYPOINT_SERVER_TLS_SKIP_VERIFY }}
           WP_VAR_registry_auth_password: ${{ secrets.token }}
+          WP_VAR_registry_auth_username: ${{ github.actor }}
           WP_VAR_registry_image_tag: ${{ inputs.tag }}
+          WP_VARS_HCL: ${{ secrets.WP_VARS_HCL }}
         run: |
           waypoint init -plain
-          waypoint up -plain \
+          waypoint ${{ inputs.operation }} -plain \
             -w ${{ inputs.workspace }} \
-            -var='ingress=${{ inputs.ingress }}'
+            ${{ inputs.operation == 'delete' && '-auto-approve' || '-prune-retain=2' }} \
+            -var-file=<(printenv WP_VARS_HCL)

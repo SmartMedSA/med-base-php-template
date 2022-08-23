@@ -34,9 +34,11 @@ on:
 
 
 jobs:
-  waypoint_up:
+  waypoint:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.waypoint.outputs.ingress_host }}
     permissions:
       contents: read
       packages: write
@@ -71,7 +73,8 @@ jobs:
         run: |
           helm dependency update chart/
 
-      - name: script - waypoint up
+      - name: script - waypoint
+        id: waypoint
         env:
           KUBECONFIG: ${{ steps.kubeconfig.outputs.filePath }}
           WAYPOINT_SERVER_TOKEN: ${{ secrets.WAYPOINT_SERVER_TOKEN }}
@@ -88,3 +91,5 @@ jobs:
             -w ${{ inputs.workspace }} \
             ${{ inputs.operation == 'delete' && '-auto-approve' || '-prune-retain=2' }} \
             -var-file=<(printenv WP_VARS_HCL)
+
+            echo "::set-output name=ingress_host::$(<ingress_host.wpoutput)"

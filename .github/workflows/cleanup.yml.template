@@ -7,6 +7,7 @@ on:
     types:
       - closed
 
+jobs:
   artifact:
     uses: SmartMedSA/med-base-php-template/.github/workflows/docker_delete.yml@master
     with:
@@ -18,7 +19,6 @@ on:
 
   waypoint:
     if: github.ref == 'refs/heads/develop'
-    needs: ci
     uses: SmartMedSA/med-base-php-template/.github/workflows/waypoint.yml@master
     with:
       environment: develop

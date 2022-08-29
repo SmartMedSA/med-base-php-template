@@ -16,6 +16,9 @@ on:
       tag:
         required: true
         type: string
+      helm_dir:
+        required: false
+        type: string
     secrets:
       token:
         required: true
@@ -43,7 +46,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: exec - install dependencies
+      - name: run - install dependencies
         run: |
           sudo apt-get install apt-transport-https --yes
           wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo dd status=none of=/usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -52,17 +55,17 @@ jobs:
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
           sudo apt update && sudo apt install waypoint helm
 
-      - name: Docker - login container registry
+      - name: docker - login container registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.token }}
 
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v3
 
-      - name: System - setup KUBECONFIG
+      - name: base64-to-file - KUBECONFIG
         id: kubeconfig
         uses: timheuer/base64-to-file@v1.1
         with:
@@ -70,10 +73,11 @@ jobs:
           encodedString: ${{ secrets.kubeconfig }}
 
       - name: script - helm dependency update
+        if: inputs.helm_dir
         run: |
-          helm dependency update chart/
+          helm dependency update ${{ inputs.helm_dir }}
 
-      - name: script - waypoint
+      - name: run - waypoint
         id: waypoint
         env:
           KUBECONFIG: ${{ steps.kubeconfig.outputs.filePath }}

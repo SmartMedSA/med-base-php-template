@@ -2,6 +2,10 @@ name: Docker Build
 
 on:
   workflow_call:
+    outputs:
+      tags:
+        description: "Docker tags built"
+        value: ${{ jobs.build.outputs.tags }}
     inputs:
       username:
         required: true
